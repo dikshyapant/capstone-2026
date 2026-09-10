@@ -4,13 +4,12 @@
 ---
 
 ## Project Overview
-The Butterfly Project (Lupus Butterfly) is a medication adherence application designed for Lupus patients. The app addresses medication non-compliance by combining real-time tracking with a gamified reward system (Butterfly Bucks) to motivate consistent medication intake. Clinicians can monitor patient adherence through a dedicated dashboard with real-time alerts.
+The Butterfly Project (Lupus Butterfly) is a gamified medication adherence app for Lupus patients. Patients log doses and earn Butterfly Bucks for taking hydroxychloroquine (HCQ) on time; clinicians monitor adherence and get alerted when a patient falls behind. It's a native Android app backed by a real Supabase database.
 
 ---
 
 ## Project Status
-**MVP Prototype Complete** (Capstone I) — Full mobile app development, cloud deployment, and authentication in progress for Capstone II.
-**Note:** The Flask backend and Streamlit prototype in `Source_Code/` represent the Capstone I MVP. Capstone II is pivoting to a native mobile application; this code is kept for reference while new mobile source code is developed.
+**Android app is live.** Real Supabase authentication and database, working patient and clinician dashboards, and CR-02 (Adherence Halo, streaks, Double Monarch Days) are all implemented and testable end to end.
 
 ---
 
@@ -33,10 +32,9 @@ See [CONTRIBUTIONS.md](./CONTRIBUTIONS.md) for a full breakdown of individual wo
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Python / Flask |
-| Database | SQLite (migrating to Supabase for Capstone II) |
-| Web Prototype | Streamlit (UI.py) |
-| Mobile App | Android/iOS (in development) |
+| Mobile App | Native Android — Kotlin + Jetpack Compose (Material 3) |
+| Backend / Database | Supabase (Postgres, Auth, Row Level Security) |
+| Navigation | Jetpack Navigation Compose |
 | Version Control | GitHub |
 | Project Management | Trello (Kanban) |
 
@@ -45,19 +43,14 @@ See [CONTRIBUTIONS.md](./CONTRIBUTIONS.md) for a full breakdown of individual wo
 ## Folder Structure
 
 ```
-capstone-spring-2026/
+capstone-2026/
 ├── README.md
 ├── CONTRIBUTIONS.md
 │
 ├── Source_Code/
-│   ├── Backend/
-│   │   ├── app.py              # Flask REST API
-│   │   ├── database/           # SQLite schema & models
-│   │   └── services/           # Business logic (adherence, rewards)
-│   │
-│   ├── Frontend/
-│   │   ├── UI.py                # Streamlit web prototype
-│   │   └── mobile/               # HTML/CSS/JS mobile prototype
+│   └── Frontend/
+│       └── mobile/
+│           └── ButterflyApp/     # Native Android app (Kotlin + Jetpack Compose)
 │
 ├── Testing/
 │   ├── test_cases/
@@ -71,60 +64,42 @@ capstone-spring-2026/
 
 ---
 
-## How to Run the Web Prototype
+## How to Run the App
 
-### Prerequisites
-```bash
-pip3 install flask streamlit requests
-```
+1. Open **Android Studio** → **Open** → select `Source_Code/Frontend/mobile/ButterflyApp`. Let it sync (accept any AGP/Gradle upgrade prompt).
+2. In the Supabase project's SQL editor, run every file in `ButterflyApp/supabase/migrations/` **in numeric order (01 → 05)** before first launch — skipping one breaks login, dose logging, or the Account screens.
+3. The app already points at a live Supabase project (URL + public anon key in `SupabaseClient.kt` — safe to keep, access is controlled by Row Level Security, not by hiding the key).
+4. Hit **Run ▶** on an emulator (Pixel + API 34 recommended) or a physical device.
 
-### Step 1 — Start the Flask backend (Terminal 1)
-```bash
-git clone https://github.com/dikshyapant/capstone-spring-2026.git
-cd capstone-spring-2026/Source_Code/Backend
-pip3 install -r requirements.txt
-python3 app.py
-```
-Backend runs at: `http://127.0.0.1:5000`
-
-### Step 2 — Start the Streamlit frontend (Terminal 2)
-```bash
-cd capstone-spring-2026/Source_Code/Frontend
-streamlit run UI.py
-```
-Open browser at: `http://localhost:8501`
-
-### Demo Accounts
-| Role | Username | Password |
-|------|----------|----------|
-| Patient | taylor | pass123 |
-| Patient | maya | pass123 |
-| Clinician | drEmma | clinic123 |
+Full details, including exactly what each screen does, are in [`ButterflyApp/README.md`](./Source_Code/Frontend/mobile/ButterflyApp/README.md).
 
 ---
 
-## Features (MVP — Capstone I)
+## Features
 
 ### Patient
-- Sign up & login
-- View medication status (taken, late, missed)
-- Mark medications as taken — live database update
-- Earn Butterfly Bucks (On-time +2 BB, Late +1 BB, Missed +0 BB)
-- Progress through game stages: Chrysalis 🥚 → Caterpillar 🐛 → Butterfly 🦋
-- View full adherence history
+- Sign up / log in with real Supabase authentication
+- Dashboard: today's medications, "Mark Taken," adherence halo, consecutive-day streak
+- **Double Monarch Days (CR-02):** every 2nd consecutive on-time day pays double Butterfly Bucks
+- Adherence Calendar: full halo history by day, with a ⭐ marker on past Double Monarch Days
+- Butterfly Bank: Butterfly Bucks balance and game-stage progress
+- Customise Butterfly: choose the halo/accent color
+- Account: edit info, change password, delete (deactivate) account, notification settings, data & privacy, help & support, reduce-motion toggle
 
 ### Clinician
-- Login to dedicated dashboard
-- View non-adherence alerts for patients
-- Search and filter patient list
-- View individual patient adherence charts
+- Dashboard: patient list, live non-adherence alerts preview
+- Full Non-Adherence Alerts screen
+- Same Account menu as patients (info, notifications, privacy, help, logout)
+
+### CR-02: Adherence Halo & Double Monarch Days
+A dose logged within 30 minutes of its scheduled time (either side) counts as on-time and earns the halo. Consecutive on-time days build a streak; **every 2nd consecutive day** is a Double Monarch Day and pays $4 instead of $2 — per the approved Project Plan / CR-02.
 
 ---
 
 ## Butterfly Bucks Reward System
 | Action | Reward |
 |--------|--------|
-| Medication taken on time | +2 BB |
+| Medication taken on time | +2 BB (**+4 BB on a Double Monarch Day**) |
 | Medication taken late | +1 BB |
 | Medication missed | 0 BB |
 
@@ -135,40 +110,32 @@ Open browser at: `http://localhost:8501`
 
 ---
 
-## Testing
-Test cases and results are tracked in `/Testing`. Backend endpoints are covered by manual test cases in Capstone I; automated test coverage is planned for Capstone II.
+## Patient User Flow
+1. User creates account or logs in
+2. Dashboard shows today's medications, BB balance, streak, and game stage
+3. User marks a medication taken → on-time doses glow with the adherence halo
+4. Every 2nd consecutive on-time day triggers a Double Monarch Day (2x Butterfly Bucks)
+5. User checks the Adherence Calendar to see halo history and past Double Monarch Days
+6. User customises their butterfly's color and tracks progress in the Butterfly Bank
+
+## Clinician User Flow
+1. Clinician logs into their dashboard
+2. Sees a live preview of patients with no dose logged today
+3. Opens the full Non-Adherence Alerts screen for details
+4. Reviews the patient list and individual adherence
 
 ---
 
-## Capstone II Roadmap
-- Full Android/iOS mobile app
-- Bluetooth bottle cap hardware integration
-- Live push notifications
-- Full authentication system with encryption
-- Cloud deployment (Supabase + Streamlit Cloud)
+## Testing
+Test cases and results are tracked in `/Testing`.
+
+---
+
+## Roadmap
+- Bluetooth smart bottle cap hardware integration
+- Live push notifications (notification *preference* is already stored per-user; delivery isn't wired up yet)
 
 ---
 
 ## UI Design / Wireframes
-UI mockups are located in `Documentation/wireframes`:
-- Sign Up Screen
-- Patient Home Screen
-- Patient Account Page
-- Clinician Home Dashboard
-- Clinician Account Page
-
----
-
-## Patient User Flow
-1. User creates account or logs in
-2. Home dashboard displays medication status, BB balance, and game stage
-3. User marks medication as taken → app logs timestamp
-4. Butterfly Bucks awarded based on adherence timing
-5. User progresses through game stages by accumulating BB
-6. User views adherence history and Butterfly Bank
-
-## Clinician User Flow
-1. Clinician logs into dedicated dashboard
-2. Views non-adherence alerts for patients who missed medications
-3. Searches patient list and views individual adherence data
-4. Monitors weekly/monthly adherence trends via charts
+UI mockups are located in `Documentation/wireframes`.
