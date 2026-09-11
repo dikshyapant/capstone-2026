@@ -1,28 +1,37 @@
-# Lupus Butterfly — Android Prototype
+# Lupus Butterfly — Android App
 
 Team Monarch | Capstone II | Fall 2026
 
 ## What's in here
 
-A basic native Android app (Kotlin + Jetpack Compose) with four working screens:
+A native Android app (Kotlin + Jetpack Compose) backed by a real Supabase project (Auth + Postgres database).
 
-- **Login** — email/password fields, buttons to log in as Patient or Clinician (any input works, no real backend yet)
-- **Sign Up** — name/email/password + role selector
-- **Patient Dashboard** — Butterfly Bucks balance, game stage (Chrysalis → Caterpillar → Butterfly), today's medications with "Mark Taken" (awards +2 BB and updates your stage live)
-- **Clinician Dashboard** — patient list with adherence %, non-adherence alerts, search
+**Patient**
+- Login / Sign Up (real Supabase Auth, email + password)
+- Dashboard — today's medications with "Mark Taken," adherence halo, consecutive-day streak, Double Monarch Day bonus (CR-02)
+- Adherence Calendar — halo history by day, with a ⭐ marker on past Double Monarch Days
+- Butterfly Bank — Butterfly Bucks balance and game-stage progress (Chrysalis 🥚 → Caterpillar 🐛 → Butterfly 🦋)
+- Customise Butterfly — pick the halo/accent color
+- Account: Account Info (edit name/email/phone, change password, delete account), Notification Settings, Data & Privacy, Help & Support, Reduce Motion toggle
 
-All data is currently mocked/in-memory (see `MockData.kt`) — nothing is wired to a real backend yet. That's the next step once this shell is working and approved by the team.
+**Clinician**
+- Dashboard — patient list, live non-adherence alerts preview
+- Non-Adherence Alerts — full list of patients with no dose logged today
+- Account: same Account Info / Notification Settings / Data & Privacy / Help & Support menu as patients
 
-## How to open it
+## CR-02: Adherence Halo & Double Monarch Days
 
-1. Open **Android Studio**.
-2. On the Welcome screen, choose **Open** (not "New Project").
-3. Select this `ButterflyApp` folder.
-4. Let it sync — it may prompt you to **upgrade the Android Gradle Plugin / Gradle version** to match your Android Studio version. That's normal and expected; click **Upgrade** / **Accept** when it asks.
-5. Once synced, click the green **Run ▶** button at the top. Android Studio will ask you to select a device — pick (or create) a virtual device (emulator) and it will launch there.
+A dose logged within 30 minutes of its scheduled time (either side) counts as on-time and earns the halo. Consecutive on-time days build a streak; every 2nd consecutive day is a Double Monarch Day and pays $4 instead of $2 (per the approved Project Plan / CR-02 — not the SRS's "3 days," which was an unconfirmed placeholder). Double Monarch history is derived from the existing on-time log dates, so it's visible any time on the Adherence Calendar rather than needing its own notification system.
+
+## Setup
+
+1. Open **Android Studio** → **Open** → select this `ButterflyApp` folder. Let it sync (it may prompt to upgrade AGP/Gradle — accept that).
+2. In your Supabase project's SQL editor, run everything in `supabase/migrations/` **in numeric order** (01 through 05) before first launch. Skipping one will break login, medication logging, or the newer Account screens.
+3. The app is already pointed at a live Supabase project (URL + anon key in `SupabaseClient.kt`). The anon key is the public client key and is safe to ship in the app — if you spin up a different Supabase project, swap both values there.
+4. Run ▶ on an emulator (Pixel + API 34 recommended) or a physical device.
 
 ## Notes
 
 - Package name: `com.teammonarch.butterfly`
-- Min Android version supported: Android 8.0 (API 26)
-- Nothing here has been pushed to GitHub yet — this is a local-only build for the team to review first.
+- Min Android version: Android 8.0 (API 26)
+- No `gradlew` wrapper scripts are checked in — open the project directly in Android Studio rather than building from the command line.
