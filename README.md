@@ -66,10 +66,10 @@ capstone-2026/
 
 ## How to Run the App
 
+**All you need is Android Studio installed.** No Supabase account, no setup — the app already points at a live, shared Supabase backend, so cloning this repo and hitting Run is enough.
+
 1. Open **Android Studio** → **Open** → select `Source_Code/Frontend/mobile/ButterflyApp`. Let it sync (accept any AGP/Gradle upgrade prompt).
-2. In the Supabase project's SQL editor, run every file in `ButterflyApp/supabase/migrations/` **in numeric order (01 → 05)** before first launch — skipping one breaks login, dose logging, or the Account screens.
-3. The app already points at a live Supabase project (URL + public anon key in `SupabaseClient.kt` — safe to keep, access is controlled by Row Level Security, not by hiding the key).
-4. Hit **Run ▶** on an emulator (Pixel + API 34 recommended) or a physical device.
+2. Hit **Run ▶** on an emulator (Pixel + API 34 recommended) or a physical device.
 
 Full details, including exactly what each screen does, are in [`ButterflyApp/README.md`](./Source_Code/Frontend/mobile/ButterflyApp/README.md).
 
@@ -134,6 +134,7 @@ Test cases and results are tracked in `/Testing`.
 ## Roadmap
 - Bluetooth smart bottle cap hardware integration
 - Live push notifications (notification *preference* is already stored per-user; delivery isn't wired up yet)
+- iOS app
 
 ---
 

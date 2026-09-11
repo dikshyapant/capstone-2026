@@ -25,10 +25,10 @@ A dose logged within 30 minutes of its scheduled time (either side) counts as on
 
 ## Setup
 
+**All you need is Android Studio.** No Supabase account, no setup — the app already points at a live, shared Supabase backend.
+
 1. Open **Android Studio** → **Open** → select this `ButterflyApp` folder. Let it sync (it may prompt to upgrade AGP/Gradle — accept that).
-2. In your Supabase project's SQL editor, run everything in `supabase/migrations/` **in numeric order** (01 through 05) before first launch. Skipping one will break login, medication logging, or the newer Account screens.
-3. The app is already pointed at a live Supabase project (URL + anon key in `SupabaseClient.kt`). The anon key is the public client key and is safe to ship in the app — if you spin up a different Supabase project, swap both values there.
-4. Run ▶ on an emulator (Pixel + API 34 recommended) or a physical device.
+2. Run ▶ on an emulator (Pixel + API 34 recommended) or a physical device.
 
 ## Notes
 
