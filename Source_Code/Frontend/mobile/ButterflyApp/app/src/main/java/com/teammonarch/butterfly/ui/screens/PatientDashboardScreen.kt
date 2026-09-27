@@ -89,9 +89,11 @@ fun PatientDashboardScreen(
     LaunchedEffect(profile?.id) {
         val patientId = profile?.id ?: return@LaunchedEffect
         val result = SupabaseRepository.fetchMedications(patientId)
-        isLoading = false
         result.onSuccess { medications = it }
             .onFailure { errorMessage = it.message }
+        SupabaseRepository.fetchTodaysMedicationStatuses(patientId)
+            .onSuccess { medStatuses = it }
+        isLoading = false
     }
 
     fun markTaken(med: MedicationRow) {

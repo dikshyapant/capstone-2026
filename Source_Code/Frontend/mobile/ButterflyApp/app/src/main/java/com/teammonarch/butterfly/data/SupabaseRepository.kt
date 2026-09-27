@@ -185,6 +185,24 @@ object SupabaseRepository {
         }
     }
 
+    /** medicationId -> wasOnTime for doses already logged today, so the dashboard can restore "On Time"/"Late" chips after a re-fetch instead of showing "Mark Taken" again. */
+    suspend fun fetchTodaysMedicationStatuses(patientId: String): Result<Map<String, Boolean>> {
+        return try {
+            val today = LocalDate.now().toString()
+            val logs = client.postgrest["medication_logs"]
+                .select {
+                    filter {
+                        eq("patient_id", patientId)
+                        eq("scheduled_for", today)
+                    }
+                }
+                .decodeList<MedicationLogRow>()
+            Result.success(logs.associate { it.medicationId to (it.status == "taken_on_time") })
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun addMedication(patientId: String, name: String, scheduledTime: String): Result<Unit> {
         return try {
             client.postgrest["medications"].insert(
