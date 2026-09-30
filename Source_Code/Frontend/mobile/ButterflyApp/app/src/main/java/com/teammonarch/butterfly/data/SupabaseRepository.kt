@@ -280,7 +280,10 @@ object SupabaseRepository {
                     )
                 )
                 client.postgrest["profiles"].update(
-                    { set("current_bb", newBalance) }
+                    {
+                        set("current_bb", newBalance)
+                        set("last_log_date", today.toString())
+                    }
                 ) {
                     filter { eq("id", patientId) }
                 }
