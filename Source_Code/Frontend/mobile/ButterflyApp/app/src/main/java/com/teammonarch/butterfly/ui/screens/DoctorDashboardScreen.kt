@@ -22,6 +22,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -41,6 +42,7 @@ import com.teammonarch.butterfly.data.ProfileRow
 import com.teammonarch.butterfly.data.SupabaseRepository
 import com.teammonarch.butterfly.ui.components.ClinicianBottomNav
 import com.teammonarch.butterfly.ui.components.ClinicianNavTab
+import com.teammonarch.butterfly.ui.components.NotificationBell
 import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.DeepViolet
 import com.teammonarch.butterfly.ui.theme.HomeGradient
@@ -50,7 +52,11 @@ import com.teammonarch.butterfly.ui.theme.Violet
 import java.time.LocalDate
 
 @Composable
-fun DoctorDashboardScreen(onNavigateToAccount: () -> Unit, onNavigateToAlerts: () -> Unit) {
+fun DoctorDashboardScreen(
+    onNavigateToAccount: () -> Unit,
+    onNavigateToAlerts: () -> Unit,
+    onNavigateToNotifications: () -> Unit = {}
+) {
     var query by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(ClinicianNavTab.DASHBOARD) }
     var patients by remember { mutableStateOf<List<ProfileRow>>(emptyList()) }
@@ -91,12 +97,29 @@ fun DoctorDashboardScreen(onNavigateToAccount: () -> Unit, onNavigateToAlerts: (
                         .background(HomeGradient)
                         .padding(20.dp)
                 ) {
-                    Text(
-                        "Good Morning, ${AppSession.currentProfile?.fullName ?: "Doctor"}!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = DeepViolet
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Good Morning, ${AppSession.currentProfile?.fullName ?: "Doctor"}!",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepViolet,
+                            modifier = Modifier.weight(1f)
+                        )
+                        NotificationBell(
+                            onClick = onNavigateToNotifications,
+                            count = if (isLoading) 0 else nonAdherent.size
+                        )
+                        IconButton(onClick = onNavigateToAccount) {
+                            Icon(
+                                Icons.Filled.AccountCircle,
+                                contentDescription = "Profile",
+                                tint = DeepViolet
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(16.dp))
 
                     OutlinedTextField(

@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -52,6 +53,7 @@ import com.teammonarch.butterfly.data.SupabaseRepository
 import com.teammonarch.butterfly.model.GameStage
 import com.teammonarch.butterfly.ui.components.ButterflyBottomNav
 import com.teammonarch.butterfly.ui.components.NavTab
+import com.teammonarch.butterfly.ui.components.NotificationBell
 import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.DeepViolet
 import com.teammonarch.butterfly.ui.theme.GoldAmber
@@ -67,7 +69,8 @@ fun PatientDashboardScreen(
     onNavigateToAccount: () -> Unit,
     onNavigateToHistory: () -> Unit,
     onNavigateToBank: () -> Unit,
-    onNavigateToCustomize: () -> Unit
+    onNavigateToCustomize: () -> Unit,
+    onNavigateToNotifications: () -> Unit = {}
 ) {
     val profile = AppSession.currentProfile
     var bb by remember { mutableStateOf(profile?.currentBb ?: 0) }
@@ -149,12 +152,29 @@ fun PatientDashboardScreen(
                         .background(HomeGradient)
                         .padding(20.dp)
                 ) {
-                    Text(
-                        "Good Morning, ${profile?.fullName ?: "there"}!",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = DeepViolet
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Good Morning, ${profile?.fullName ?: "there"}!",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = DeepViolet,
+                            modifier = Modifier.weight(1f)
+                        )
+                        NotificationBell(
+                            onClick = onNavigateToNotifications,
+                            count = medications.count { medStatuses[it.id] == null }
+                        )
+                        IconButton(onClick = onNavigateToAccount) {
+                            Icon(
+                                Icons.Filled.AccountCircle,
+                                contentDescription = "Profile",
+                                tint = DeepViolet
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(16.dp))
 
                     if (doubleMonarchBanner) {

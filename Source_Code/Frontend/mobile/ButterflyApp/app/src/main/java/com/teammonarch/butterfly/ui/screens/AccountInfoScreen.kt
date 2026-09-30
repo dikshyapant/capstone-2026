@@ -1,5 +1,7 @@
 package com.teammonarch.butterfly.ui.screens
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,10 +12,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +44,9 @@ import com.teammonarch.butterfly.data.SupabaseRepository
 import com.teammonarch.butterfly.ui.theme.MonarchRed
 import com.teammonarch.butterfly.ui.theme.TextMuted
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +55,8 @@ fun AccountInfoScreen(onBack: () -> Unit, onAccountDeleted: () -> Unit) {
     var name by remember { mutableStateOf(profile?.fullName ?: "") }
     var email by remember { mutableStateOf(profile?.email ?: "") }
     var phone by remember { mutableStateOf(profile?.phone ?: "") }
-    val dob = profile?.dateOfBirth ?: ""
+    var dob by remember { mutableStateOf(profile?.dateOfBirth ?: "") }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     var isSaving by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -61,7 +71,12 @@ fun AccountInfoScreen(onBack: () -> Unit, onAccountDeleted: () -> Unit) {
             val result = SupabaseRepository.updateProfile(userId, name.trim(), email.trim(), phone.trim(), dob)
             isSaving = false
             result.onSuccess {
-                AppSession.currentProfile = profile.copy(fullName = name.trim(), email = email.trim(), phone = phone.trim())
+                AppSession.currentProfile = profile.copy(
+                    fullName = name.trim(),
+                    email = email.trim(),
+                    phone = phone.trim(),
+                    dateOfBirth = dob
+                )
                 message = "Saved."
             }.onFailure { message = it.message ?: "Couldn't save changes." }
         }
@@ -110,20 +125,27 @@ fun AccountInfoScreen(onBack: () -> Unit, onAccountDeleted: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = dob,
-                onValueChange = {},
-                label = { Text("Date of Birth") },
-                enabled = false,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                "Date of birth can't be changed here.",
-                style = MaterialTheme.typography.labelSmall,
-                color = TextMuted,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+
+            // Tap anywhere on the field to open the calendar
+            Box {
+                OutlinedTextField(
+                    value = dob,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Date of Birth") },
+                    placeholder = { Text("Tap to choose a date") },
+                    trailingIcon = {
+                        Icon(Icons.Filled.DateRange, contentDescription = "Choose date")
+                    },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .clickable { showDatePicker = true }
+                )
+            }
 
             if (message != null) {
                 Spacer(Modifier.height(8.dp))
@@ -154,6 +176,35 @@ fun AccountInfoScreen(onBack: () -> Unit, onAccountDeleted: () -> Unit) {
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MonarchRed),
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) { Text("Delete Account") }
+        }
+    }
+
+    if (showDatePicker) {
+        val initialMillis = runCatching {
+            LocalDate.parse(dob).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        }.getOrNull()
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialMillis,
+            yearRange = 1900..LocalDate.now().year
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { millis ->
+                        dob = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toString() // yyyy-MM-dd
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = pickerState)
         }
     }
 

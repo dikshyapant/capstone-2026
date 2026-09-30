@@ -17,6 +17,7 @@ import com.teammonarch.butterfly.ui.screens.DoctorDashboardScreen
 import com.teammonarch.butterfly.ui.screens.HelpSupportScreen
 import com.teammonarch.butterfly.ui.screens.LoginScreen
 import com.teammonarch.butterfly.ui.screens.NotificationSettingsScreen
+import com.teammonarch.butterfly.ui.screens.NotificationsScreen
 import com.teammonarch.butterfly.ui.screens.PatientAccountScreen
 import com.teammonarch.butterfly.ui.screens.PatientDashboardScreen
 import com.teammonarch.butterfly.ui.screens.SignUpScreen
@@ -34,6 +35,7 @@ object Routes {
     const val CLINICIAN_ALERTS = "clinician_alerts"
     const val ACCOUNT_INFO = "account_info"
     const val NOTIFICATION_SETTINGS = "notification_settings"
+    const val NOTIFICATIONS = "notifications"
     const val DATA_PRIVACY = "data_privacy"
     const val HELP_SUPPORT = "help_support"
 }
@@ -70,7 +72,8 @@ fun ButterflyNavGraph(navController: NavHostController = rememberNavController()
                 onNavigateToAccount = { navController.navigate(Routes.PATIENT_ACCOUNT) },
                 onNavigateToHistory = { navController.navigate(Routes.ADHERENCE_HISTORY) },
                 onNavigateToBank = { navController.navigate(Routes.BUTTERFLY_BANK) },
-                onNavigateToCustomize = { navController.navigate(Routes.CUSTOMISE_BUTTERFLY) }
+                onNavigateToCustomize = { navController.navigate(Routes.CUSTOMISE_BUTTERFLY) },
+                onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) }
             )
         }
         composable(Routes.ADHERENCE_HISTORY) {
@@ -99,7 +102,8 @@ fun ButterflyNavGraph(navController: NavHostController = rememberNavController()
         composable(Routes.DOCTOR_DASHBOARD) {
             DoctorDashboardScreen(
                 onNavigateToAccount = { navController.navigate(Routes.DOCTOR_ACCOUNT) },
-                onNavigateToAlerts = { navController.navigate(Routes.CLINICIAN_ALERTS) }
+                onNavigateToAlerts = { navController.navigate(Routes.CLINICIAN_ALERTS) },
+                onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) }
             )
         }
         composable(Routes.CLINICIAN_ALERTS) {
@@ -127,6 +131,12 @@ fun ButterflyNavGraph(navController: NavHostController = rememberNavController()
                         popUpTo(0) { inclusive = true }
                     }
                 }
+            )
+        }
+        composable(Routes.NOTIFICATIONS) {
+            NotificationsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenSettings = { navController.navigate(Routes.NOTIFICATION_SETTINGS) }
             )
         }
         composable(Routes.NOTIFICATION_SETTINGS) {
