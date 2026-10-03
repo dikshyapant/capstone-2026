@@ -2,6 +2,7 @@ package com.teammonarch.butterfly.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -70,15 +71,18 @@ fun LoginScreen(
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AuthGradient)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .background(brush = AuthGradient)
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
         Spacer(Modifier.height(24.dp))
         BrandLogo(tint = CardWhite)
         Spacer(Modifier.height(4.dp))
@@ -90,12 +94,27 @@ fun LoginScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        val fieldColors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = CardWhite,
-            unfocusedContainerColor = CardWhite,
-            focusedBorderColor = DeepViolet,
-            unfocusedBorderColor = CardWhite
-        )
+            val fieldColors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = CardWhite,
+                unfocusedContainerColor = CardWhite,
+
+                focusedBorderColor = DeepViolet,
+                unfocusedBorderColor = DeepViolet.copy(alpha = 0.45f),
+
+                focusedTextColor = DeepViolet,
+                unfocusedTextColor = DeepViolet,
+
+                focusedLabelColor = DeepViolet,
+                unfocusedLabelColor = DeepViolet.copy(alpha = 0.85f),
+
+                focusedPlaceholderColor = DeepViolet.copy(alpha = 0.75f),
+                unfocusedPlaceholderColor = DeepViolet.copy(alpha = 0.75f),
+
+                focusedLeadingIconColor = DeepViolet,
+                unfocusedLeadingIconColor = DeepViolet.copy(alpha = 0.8f),
+
+                cursorColor = DeepViolet
+            )
 
         OutlinedTextField(
             value = email,
@@ -147,8 +166,18 @@ fun LoginScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        TextButton(onClick = onNavigateToSignUp) {
-            Text("Don't have an account? Sign up", color = CardWhite, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onNavigateToSignUp) {
+                Text(
+                    "Don't have an account? Sign up",
+                    color = CardWhite,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
         }
+
+        ButterflyEffectsOverlay()
+
     }
+
 }
