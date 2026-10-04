@@ -4,6 +4,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.query.Order
 import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -253,7 +254,8 @@ object SupabaseRepository {
                         medicationId = medicationId,
                         patientId = patientId,
                         status = "taken_on_time",
-                        scheduledFor = today.toString()
+                        scheduledFor = today.toString(),
+                        bbAwarded = bbAwarded
                     )
                 )
                 client.postgrest["profiles"].update(
@@ -276,7 +278,8 @@ object SupabaseRepository {
                         medicationId = medicationId,
                         patientId = patientId,
                         status = "taken_late",
-                        scheduledFor = today.toString()
+                        scheduledFor = today.toString(),
+                        bbAwarded = bbAwarded
                     )
                 )
                 client.postgrest["profiles"].update(
@@ -307,6 +310,22 @@ object SupabaseRepository {
                 }
                 .decodeList<ScheduledForRow>()
             Result.success(logs.mapNotNull { it.scheduledFor }.distinct())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Recent BB-earning events for the Butterfly Bank activity feed, newest first. */
+    suspend fun fetchRecentActivity(patientId: String, limit: Long = 10): Result<List<MedicationLogRow>> {
+        return try {
+            val logs = client.postgrest["medication_logs"]
+                .select {
+                    filter { eq("patient_id", patientId) }
+                    order("created_at", Order.DESCENDING)
+                    limit(limit)
+                }
+                .decodeList<MedicationLogRow>()
+            Result.success(logs)
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.teammonarch.butterfly.data.AppSession
+import com.teammonarch.butterfly.data.MarkTakenResult
 import com.teammonarch.butterfly.data.MedicationRow
 import com.teammonarch.butterfly.data.SupabaseRepository
 import com.teammonarch.butterfly.model.GameStage
@@ -63,6 +66,10 @@ import com.teammonarch.butterfly.ui.theme.TextMuted
 import com.teammonarch.butterfly.ui.theme.Violet
 import com.teammonarch.butterfly.ui.theme.butterflyColorFor
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun PatientDashboardScreen(
@@ -81,7 +88,8 @@ fun PatientDashboardScreen(
     var medStatuses by remember { mutableStateOf(mapOf<String, Boolean>()) } // medId -> wasOnTime
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var doubleMonarchBanner by remember { mutableStateOf(false) }
+    var lastReward by remember { mutableStateOf<MarkTakenResult?>(null) }
+    var showDoubleMonarchDialog by remember { mutableStateOf(false) }
     var lateBanner by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(NavTab.HOME) }
     var newMedName by remember { mutableStateOf("") }
@@ -108,7 +116,8 @@ fun PatientDashboardScreen(
                 bb = r.newBalance
                 streak = r.newStreak
                 medStatuses = medStatuses + (medId to r.wasOnTime)
-                doubleMonarchBanner = r.isDoubleMonarchDay
+                lastReward = r
+                showDoubleMonarchDialog = r.isDoubleMonarchDay
                 lateBanner = !r.wasOnTime
                 AppSession.currentProfile = profile.copy(currentBb = r.newBalance, currentStreak = r.newStreak)
             }.onFailure { errorMessage = it.message }
@@ -157,12 +166,20 @@ fun PatientDashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Good Morning, ${profile?.fullName ?: "there"}!",
+                            "Welcome back, ${profile?.fullName ?: "there"}",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = DeepViolet,
                             modifier = Modifier.weight(1f)
                         )
+                        Box(
+                            modifier = Modifier
+                                .background(CardWhite, MaterialTheme.shapes.extraLarge)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text("🫙 $bb BB", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = DeepViolet)
+                        }
+                        Spacer(Modifier.width(8.dp))
                         NotificationBell(
                             onClick = onNavigateToNotifications,
                             count = medications.count { medStatuses[it.id] == null }
@@ -175,24 +192,50 @@ fun PatientDashboardScreen(
                             )
                         }
                     }
+                    Text(
+                        LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DeepViolet.copy(alpha = 0.75f)
+                    )
                     Spacer(Modifier.height(16.dp))
 
-                    if (doubleMonarchBanner) {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = GoldAmber.copy(alpha = 0.25f)),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("✨ Double Monarch Day! +4 Butterfly Bucks", fontWeight = FontWeight.Bold)
-                                IconButton(onClick = { doubleMonarchBanner = false }) {
-                                    Icon(Icons.Filled.Close, contentDescription = "Dismiss")
+                    val nextMed = medications.firstOrNull { medStatuses[it.id] == null } ?: medications.firstOrNull()
+                    if (nextMed != null) {
+                        Card(colors = CardDefaults.cardColors(containerColor = CardWhite), modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text("Med Status", fontWeight = FontWeight.Bold)
+                                        Text(
+                                            "Scheduled dose: ${nextMed.scheduledTime}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextMuted
+                                        )
+                                    }
+                                    val onTime = medStatuses[nextMed.id]
+                                    when (onTime) {
+                                        true -> StatusChip("On Time", Color(0xFF4A9D6E))
+                                        false -> StatusChip("Late", Color(0xFFE0A030))
+                                        null -> if (isDueSoon(nextMed.scheduledTime)) {
+                                            StatusChip("Due now", GoldAmber)
+                                        } else {
+                                            StatusChip("Upcoming", TextMuted)
+                                        }
+                                    }
+                                }
+                                if (medStatuses[nextMed.id] == null) {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = { markTaken(nextMed) }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Log Dose")
+                                    }
                                 }
                             }
                         }
+                        Spacer(Modifier.height(12.dp))
                     }
 
                     if (lateBanner) {
@@ -219,15 +262,40 @@ fun PatientDashboardScreen(
                     Card(colors = CardDefaults.cardColors(containerColor = CardWhite), modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            HaloGlow(active = streak > 0, reduceMotion = reduceMotion, haloColor = accent, modifier = Modifier.size(56.dp)) {
+                                Text("🦋", style = MaterialTheme.typography.titleLarge)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("HALO STREAK", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontWeight = FontWeight.Bold)
+                                Text(
+                                    if (streak > 0) "$streak-day streak" else "No streak yet",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accent
+                                )
+                                Text(
+                                    if (streak > 0) "All doses on time so far" else "Log a dose on time to start one",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextMuted
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Card(colors = CardDefaults.cardColors(containerColor = CardWhite), modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text("Butterfly Bucks", fontWeight = FontWeight.Bold)
                                 Text("Current Balance: $bb BB", style = MaterialTheme.typography.bodyMedium, color = TextMuted)
-                                if (streak > 0) {
-                                    Text("🔥 $streak-day streak", style = MaterialTheme.typography.labelMedium, color = accent)
-                                }
                             }
                             Text("🫙", style = MaterialTheme.typography.displaySmall, color = accent)
                         }
@@ -341,6 +409,45 @@ fun PatientDashboardScreen(
             item { Spacer(Modifier.height(16.dp)) }
         }
     }
+
+    if (showDoubleMonarchDialog && lastReward != null) {
+        val reward = lastReward!!
+        AlertDialog(
+            onDismissRequest = { showDoubleMonarchDialog = false },
+            title = { Text("✨ Double Monarch Day!", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("$streak-day streak · every dose on time")
+                    Spacer(Modifier.height(12.dp))
+                    DialogRow("Base award", "${reward.bbAwarded / 2} BB")
+                    DialogRow("Multiplier", "× 2.0")
+                    DialogRow("New balance", "${reward.newBalance} BB")
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Butterfly Bucks have no real-world monetary value.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextMuted
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDoubleMonarchDialog = false }) {
+                    Text("Dismiss")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun DialogRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = TextMuted)
+        Text(value, fontWeight = FontWeight.Bold)
+    }
 }
 
 @Composable
@@ -408,17 +515,32 @@ private fun MedicationRowCard(med: MedicationRow, wasOnTime: Boolean?, onMarkTak
         ) {
             Column {
                 Text(med.name, fontWeight = FontWeight.Bold)
-                Text("Scheduled: ${med.scheduledTime}", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                Text("Scheduled dose: ${med.scheduledTime}", style = MaterialTheme.typography.bodySmall, color = TextMuted)
             }
             if (wasOnTime == true) {
                 StatusChip("On Time", Color(0xFF4A9D6E))
             } else if (wasOnTime == false) {
                 StatusChip("Late", Color(0xFFE0A030))
             } else {
-                Button(onClick = onMarkTaken) { Text("Mark Taken") }
+                Button(onClick = onMarkTaken) { Text("Log Dose") }
             }
         }
     }
+}
+
+private val MED_STATUS_TIME_FORMATS = listOf(
+    DateTimeFormatter.ofPattern("h:mm a", Locale.US),
+    DateTimeFormatter.ofPattern("hh:mm a", Locale.US),
+    DateTimeFormatter.ofPattern("H:mm", Locale.US)
+)
+
+/** True once a scheduled dose is within 30 minutes of now or already past -- otherwise it's just upcoming, not "due now". */
+private fun isDueSoon(scheduledTimeText: String): Boolean {
+    val cleaned = scheduledTimeText.trim().uppercase(Locale.US)
+    val scheduledTime = MED_STATUS_TIME_FORMATS.firstNotNullOfOrNull {
+        runCatching { LocalTime.parse(cleaned, it) }.getOrNull()
+    } ?: return true
+    return !LocalTime.now().isBefore(scheduledTime.minusMinutes(30))
 }
 
 @Composable

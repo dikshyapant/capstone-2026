@@ -34,7 +34,9 @@ data class MedicationLogRow(
     @SerialName("medication_id") val medicationId: String,
     @SerialName("patient_id") val patientId: String,
     val status: String,
-    @SerialName("scheduled_for") val scheduledFor: String? = null
+    @SerialName("scheduled_for") val scheduledFor: String? = null,
+    @SerialName("bb_awarded") val bbAwarded: Int? = null,
+    @SerialName("created_at") val createdAt: String? = null
 )
 
 @Serializable
@@ -49,7 +51,8 @@ data class MedicationLogInsert(
     @SerialName("medication_id") val medicationId: String,
     @SerialName("patient_id") val patientId: String,
     val status: String,
-    @SerialName("scheduled_for") val scheduledFor: String
+    @SerialName("scheduled_for") val scheduledFor: String,
+    @SerialName("bb_awarded") val bbAwarded: Int
 )
 
 @Serializable

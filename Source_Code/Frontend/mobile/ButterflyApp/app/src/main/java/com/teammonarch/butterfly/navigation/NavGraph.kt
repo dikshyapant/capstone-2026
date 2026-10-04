@@ -6,6 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.teammonarch.butterfly.data.AppSession
+import com.teammonarch.butterfly.ui.screens.AccessibilityScreen
 import com.teammonarch.butterfly.ui.screens.AccountInfoScreen
 import com.teammonarch.butterfly.ui.screens.AdherenceCalendarScreen
 import com.teammonarch.butterfly.ui.screens.ButterflyBankScreen
@@ -37,6 +38,7 @@ object Routes {
     const val NOTIFICATION_SETTINGS = "notification_settings"
     const val NOTIFICATIONS = "notifications"
     const val DATA_PRIVACY = "data_privacy"
+    const val ACCESSIBILITY = "accessibility"
     const val HELP_SUPPORT = "help_support"
 }
 
@@ -96,6 +98,7 @@ fun ButterflyNavGraph(navController: NavHostController = rememberNavController()
                 onNavigateToAccountInfo = { navController.navigate(Routes.ACCOUNT_INFO) },
                 onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATION_SETTINGS) },
                 onNavigateToDataPrivacy = { navController.navigate(Routes.DATA_PRIVACY) },
+                onNavigateToAccessibility = { navController.navigate(Routes.ACCESSIBILITY) },
                 onNavigateToHelpSupport = { navController.navigate(Routes.HELP_SUPPORT) }
             )
         }
@@ -144,6 +147,9 @@ fun ButterflyNavGraph(navController: NavHostController = rememberNavController()
         }
         composable(Routes.DATA_PRIVACY) {
             DataPrivacyScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.ACCESSIBILITY) {
+            AccessibilityScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.HELP_SUPPORT) {
             HelpSupportScreen(onBack = { navController.popBackStack() })
