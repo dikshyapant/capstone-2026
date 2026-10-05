@@ -37,7 +37,7 @@ object SupabaseRepository {
 
     private val client get() = SupabaseClient.client
 
-    suspend fun signUp(email: String, password: String, fullName: String, role: String): Result<ProfileRow> {
+    suspend fun signUp(email: String, password: String, fullName: String, role: String, dateOfBirth: String = ""): Result<ProfileRow> {
         return try {
             client.auth.signUpWith(Email) {
                 this.email = email
@@ -46,7 +46,13 @@ object SupabaseRepository {
             val userId = client.auth.currentUserOrNull()?.id
                 ?: return Result.failure(IllegalStateException("Sign up succeeded but no session was returned."))
 
-            val profile = ProfileRow(id = userId, fullName = fullName, email = email, role = role)
+            val profile = ProfileRow(
+                id = userId,
+                fullName = fullName,
+                email = email,
+                role = role,
+                dateOfBirth = dateOfBirth.ifBlank { null }
+            )
             client.postgrest["profiles"].insert(profile)
             Result.success(profile)
         } catch (e: Exception) {
@@ -331,6 +337,36 @@ object SupabaseRepository {
         }
     }
 
+    /**
+     * If the patient missed a full day (no dose logged yesterday or today), their streak
+     * is stale -- zero it out both locally and in the database so the dashboard doesn't
+     * keep showing an old streak count that no longer reflects real adherence.
+     */
+    suspend fun resetStreakIfMissedDay(patientId: String): Result<Int> {
+        return try {
+            val profile = client.postgrest["profiles"]
+                .select { filter { eq("id", patientId) } }
+                .decodeSingle<ProfileRow>()
+
+            val today = LocalDate.now()
+            val lastLogDate = profile.lastLogDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            val missedADay = lastLogDate != null && lastLogDate.isBefore(today.minusDays(1))
+
+            if (profile.currentStreak > 0 && missedADay) {
+                client.postgrest["profiles"].update(
+                    { set("current_streak", 0) }
+                ) {
+                    filter { eq("id", patientId) }
+                }
+                Result.success(0)
+            } else {
+                Result.success(profile.currentStreak)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun fetchAllPatients(): Result<List<ProfileRow>> {
         return try {
             val patients = client.postgrest["profiles"]
@@ -339,6 +375,48 @@ object SupabaseRepository {
             Result.success(patients)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * patientId -> count of today's scheduled medications not yet logged -- flags a
+     * patient the moment ANY dose is still outstanding (not just when they haven't
+     * logged anything at all today), and keeps the real count so the clinician UI
+     * can say "1 dose pending" instead of falsely implying nothing was logged.
+     */
+    suspend fun fetchNonAdherentCounts(): Result<Map<String, Int>> {
+        return try {
+            val today = LocalDate.now().toString()
+            val allMeds = client.postgrest["medications"]
+                .select()
+                .decodeList<MedicationRow>()
+            val todaysLogs = client.postgrest["medication_logs"]
+                .select {
+                    filter { eq("scheduled_for", today) }
+                }
+                .decodeList<MedicationLogRow>()
+            val loggedMedicationIds = todaysLogs.map { it.medicationId }.toSet()
+
+            val nonAdherentCounts = allMeds
+                .filter { it.id != null && it.id !in loggedMedicationIds }
+                .groupingBy { it.patientId }
+                .eachCount()
+            Result.success(nonAdherentCounts)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Patients whose streak is currently broken (0) despite having logged a dose within
+     * the last 7 days -- i.e. they were active recently but lost their streak (US-03).
+     * Needs no extra fetch: it filters the patient list the caller already has.
+     */
+    fun patientsWhoBrokeStreakThisWeek(patients: List<ProfileRow>): List<ProfileRow> {
+        val today = LocalDate.now()
+        return patients.filter { patient ->
+            val lastLog = patient.lastLogDate?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            patient.currentStreak == 0 && lastLog != null && !lastLog.isBefore(today.minusDays(7))
         }
     }
 }
