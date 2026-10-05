@@ -104,6 +104,13 @@ fun PatientDashboardScreen(
             .onFailure { errorMessage = it.message }
         SupabaseRepository.fetchTodaysMedicationStatuses(patientId)
             .onSuccess { medStatuses = it }
+        SupabaseRepository.resetStreakIfMissedDay(patientId)
+            .onSuccess { resetStreak ->
+                if (resetStreak != streak) {
+                    streak = resetStreak
+                    AppSession.currentProfile = profile.copy(currentStreak = resetStreak)
+                }
+            }
         isLoading = false
     }
 
