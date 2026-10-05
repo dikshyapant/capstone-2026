@@ -45,11 +45,12 @@ import com.teammonarch.butterfly.ui.components.ClinicianNavTab
 import com.teammonarch.butterfly.ui.components.NotificationBell
 import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.DeepViolet
+import com.teammonarch.butterfly.ui.theme.GoldAmber
 import com.teammonarch.butterfly.ui.theme.HomeGradient
 import com.teammonarch.butterfly.ui.theme.MonarchRed
+import com.teammonarch.butterfly.ui.theme.TextInk
 import com.teammonarch.butterfly.ui.theme.TextMuted
 import com.teammonarch.butterfly.ui.theme.Violet
-import java.time.LocalDate
 
 @Composable
 fun DoctorDashboardScreen(
@@ -60,6 +61,7 @@ fun DoctorDashboardScreen(
     var query by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(ClinicianNavTab.DASHBOARD) }
     var patients by remember { mutableStateOf<List<ProfileRow>>(emptyList()) }
+    var nonAdherentCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -68,10 +70,12 @@ fun DoctorDashboardScreen(
         isLoading = false
         result.onSuccess { patients = it }
             .onFailure { errorMessage = it.message }
+        SupabaseRepository.fetchNonAdherentCounts()
+            .onSuccess { nonAdherentCounts = it }
     }
 
-    val today = LocalDate.now().toString()
-    val nonAdherent = patients.filter { it.lastLogDate != today }
+    val nonAdherent = patients.filter { it.id in nonAdherentCounts.keys }
+    val brokeStreak = SupabaseRepository.patientsWhoBrokeStreakThisWeek(patients)
     val filtered = patients.filter { it.fullName.contains(query, ignoreCase = true) }
 
     Scaffold(
@@ -152,18 +156,44 @@ fun DoctorDashboardScreen(
                                     Text("All patients are on track today.", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                                 } else {
                                     nonAdherent.take(2).forEach { patient ->
+                                        val pending = nonAdherentCounts[patient.id] ?: 0
                                         Row(
                                             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(patient.fullName, style = MaterialTheme.typography.bodySmall)
-                                            Text("No dose today", style = MaterialTheme.typography.labelSmall, color = MonarchRed)
+                                            Text(
+                                                "$pending dose${if (pending == 1) "" else "s"} pending",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MonarchRed
+                                            )
                                         }
                                     }
                                     if (nonAdherent.size > 2) {
                                         Text(
                                             "+ ${nonAdherent.size - 2} more",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = TextMuted
+                                        )
+                                    }
+                                }
+                                if (brokeStreak.isNotEmpty()) {
+                                    Spacer(Modifier.height(8.dp))
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(GoldAmber.copy(alpha = 0.3f), MaterialTheme.shapes.small)
+                                            .padding(12.dp)
+                                    ) {
+                                        Text(
+                                            "${brokeStreak.size} patient${if (brokeStreak.size == 1) "" else "s"} broke a streak this week",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextInk
+                                        )
+                                        Text(
+                                            "Tap to view list",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = TextMuted
                                         )
@@ -233,7 +263,28 @@ private fun PatientRow(patient: ProfileRow) {
                     Text(patient.email, style = MaterialTheme.typography.bodySmall, color = TextMuted)
                 }
             }
-            Text("${patient.currentBb} BB", fontWeight = FontWeight.Bold, color = Violet)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${patient.currentBb} BB", fontWeight = FontWeight.Bold, color = Violet)
+                Spacer(Modifier.width(8.dp))
+                StreakPill(patient.currentStreak)
+            }
         }
+    }
+}
+
+/** Read-only streak badge for the patient list, e.g. "14d" / "0d" (REQ-36). */
+@Composable
+private fun StreakPill(streakDays: Int) {
+    Box(
+        modifier = Modifier
+            .background(GoldAmber.copy(alpha = 0.3f), MaterialTheme.shapes.small)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            "${streakDays}d",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = TextInk
+        )
     }
 }
