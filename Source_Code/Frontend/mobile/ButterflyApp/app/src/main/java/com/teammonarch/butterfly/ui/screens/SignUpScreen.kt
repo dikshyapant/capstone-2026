@@ -23,6 +23,7 @@ import kotlin.random.Random
 import androidx.compose.ui.draw.alpha
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,11 +35,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -46,6 +53,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,11 +73,15 @@ import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.DeepViolet
 import com.teammonarch.butterfly.ui.theme.MonarchRed
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 private enum class SignUpRole(val dbValue: String) {
     PATIENT("patient"), CLINICIAN("clinician")
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     onAccountCreated: (ProfileRow) -> Unit,
@@ -79,6 +91,8 @@ fun SignUpScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var dateOfBirth by remember { mutableStateOf("") }
+    var showDatePicker by remember { mutableStateOf(false) }
     var role by remember { mutableStateOf(SignUpRole.PATIENT) }
     var agreedToTerms by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(false) }
@@ -100,7 +114,8 @@ fun SignUpScreen(
                 email = email.trim(),
                 password = password,
                 fullName = name.trim(),
-                role = role.dbValue
+                role = role.dbValue,
+                dateOfBirth = dateOfBirth
             )
             isLoading = false
             result.onSuccess { onAccountCreated(it) }
@@ -192,6 +207,29 @@ fun SignUpScreen(
                 colors = fieldColors,
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(12.dp))
+
+            Box {
+                OutlinedTextField(
+                    value = dateOfBirth,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Date of Birth") },
+                    placeholder = { Text("Tap to choose a date") },
+                    trailingIcon = {
+                        Icon(Icons.Filled.DateRange, contentDescription = "Choose date")
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.large,
+                    colors = fieldColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .clickable { showDatePicker = true }
+                )
+            }
 
             Spacer(Modifier.height(20.dp))
             Text(
@@ -304,6 +342,35 @@ fun SignUpScreen(
         ButterflyEffectsOverlay()
 
     } // closes Box
+
+    if (showDatePicker) {
+        val initialMillis = runCatching {
+            LocalDate.parse(dateOfBirth).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+        }.getOrNull()
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = initialMillis,
+            yearRange = 1900..LocalDate.now().year
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickerState.selectedDateMillis?.let { millis ->
+                        dateOfBirth = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneOffset.UTC)
+                            .toLocalDate()
+                            .toString() // yyyy-MM-dd
+                    }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+            }
+        ) {
+            DatePicker(state = pickerState)
+        }
+    }
 }
 @Composable
 fun ButterflyEffectsOverlay() {
