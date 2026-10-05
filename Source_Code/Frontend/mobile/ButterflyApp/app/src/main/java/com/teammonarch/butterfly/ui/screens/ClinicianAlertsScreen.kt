@@ -38,14 +38,16 @@ import androidx.compose.ui.unit.dp
 import com.teammonarch.butterfly.data.ProfileRow
 import com.teammonarch.butterfly.data.SupabaseRepository
 import com.teammonarch.butterfly.ui.theme.CardWhite
+import com.teammonarch.butterfly.ui.theme.GoldAmber
 import com.teammonarch.butterfly.ui.theme.MonarchRed
+import com.teammonarch.butterfly.ui.theme.TextInk
 import com.teammonarch.butterfly.ui.theme.TextMuted
-import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ClinicianAlertsScreen(onBack: () -> Unit) {
     var patients by remember { mutableStateOf<List<ProfileRow>>(emptyList()) }
+    var nonAdherentCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -54,10 +56,12 @@ fun ClinicianAlertsScreen(onBack: () -> Unit) {
         isLoading = false
         result.onSuccess { patients = it }
             .onFailure { errorMessage = it.message }
+        SupabaseRepository.fetchNonAdherentCounts()
+            .onSuccess { nonAdherentCounts = it }
     }
 
-    val today = LocalDate.now().toString()
-    val nonAdherent = patients.filter { it.lastLogDate != today }
+    val nonAdherent = patients.filter { it.id in nonAdherentCounts.keys }
+    val brokeStreak = SupabaseRepository.patientsWhoBrokeStreakThisWeek(patients)
 
     Scaffold(
         topBar = {
@@ -76,7 +80,7 @@ fun ClinicianAlertsScreen(onBack: () -> Unit) {
                 Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-            } else if (nonAdherent.isEmpty()) {
+            } else if (nonAdherent.isEmpty() && brokeStreak.isEmpty()) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -86,16 +90,36 @@ fun ClinicianAlertsScreen(onBack: () -> Unit) {
                     Text("All patients are on track today!", color = TextMuted)
                 }
             } else {
-                Text(
-                    "${nonAdherent.size} patient${if (nonAdherent.size == 1) "" else "s"} haven't logged a dose today",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextMuted,
-                    modifier = Modifier.padding(16.dp)
-                )
                 LazyColumn {
-                    items(nonAdherent, key = { it.id }) { patient ->
-                        Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
-                            AlertRow(patient)
+                    if (nonAdherent.isNotEmpty()) {
+                        item {
+                            Text(
+                                "${nonAdherent.size} patient${if (nonAdherent.size == 1) "" else "s"} have a dose pending today",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                        items(nonAdherent, key = { "missed_${it.id}" }) { patient ->
+                            Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                AlertRow(patient, pending = nonAdherentCounts[patient.id] ?: 0)
+                            }
+                        }
+                    }
+
+                    if (brokeStreak.isNotEmpty()) {
+                        item {
+                            Text(
+                                "${brokeStreak.size} patient${if (brokeStreak.size == 1) "" else "s"} broke a streak this week",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = TextMuted,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                        items(brokeStreak, key = { "streak_${it.id}" }) { patient ->
+                            Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+                                StreakAlertRow(patient)
+                            }
                         }
                     }
                 }
@@ -109,7 +133,7 @@ fun ClinicianAlertsScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun AlertRow(patient: ProfileRow) {
+private fun AlertRow(patient: ProfileRow, pending: Int) {
     Card(colors = CardDefaults.cardColors(containerColor = CardWhite), modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -119,12 +143,33 @@ private fun AlertRow(patient: ProfileRow) {
             Column {
                 Text(patient.fullName, fontWeight = FontWeight.Bold)
                 Text(
-                    "No dose logged today",
+                    "$pending dose${if (pending == 1) "" else "s"} pending",
                     style = MaterialTheme.typography.labelSmall,
                     color = MonarchRed
                 )
             }
             Icon(Icons.Filled.Warning, contentDescription = "Alert", tint = MonarchRed)
+        }
+    }
+}
+
+@Composable
+private fun StreakAlertRow(patient: ProfileRow) {
+    Card(colors = CardDefaults.cardColors(containerColor = GoldAmber.copy(alpha = 0.3f)), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(patient.fullName, fontWeight = FontWeight.Bold, color = TextInk)
+                Text(
+                    "Streak reset to 0",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = TextMuted
+                )
+            }
+            Icon(Icons.Filled.Warning, contentDescription = "Streak broken", tint = TextInk)
         }
     }
 }
