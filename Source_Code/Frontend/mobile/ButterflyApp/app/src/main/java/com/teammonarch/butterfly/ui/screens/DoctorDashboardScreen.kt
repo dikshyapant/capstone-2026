@@ -51,6 +51,17 @@ import com.teammonarch.butterfly.ui.theme.MonarchRed
 import com.teammonarch.butterfly.ui.theme.TextInk
 import com.teammonarch.butterfly.ui.theme.TextMuted
 import com.teammonarch.butterfly.ui.theme.Violet
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
+private fun timeBasedGreeting(): String {
+    return when (LocalTime.now().hour) {
+        in 0..11 -> "Good Morning"
+        in 12..16 -> "Good Afternoon"
+        else -> "Good Evening"
+    }
+}
 
 @Composable
 fun DoctorDashboardScreen(
@@ -106,7 +117,7 @@ fun DoctorDashboardScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "Good Morning, ${AppSession.currentProfile?.fullName ?: "Doctor"}!",
+                            "${timeBasedGreeting()}, ${AppSession.currentProfile?.fullName ?: "Doctor"}!",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = DeepViolet,
@@ -124,6 +135,11 @@ fun DoctorDashboardScreen(
                             )
                         }
                     }
+                    Text(
+                        LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DeepViolet.copy(alpha = 0.75f)
+                    )
                     Spacer(Modifier.height(16.dp))
 
                     OutlinedTextField(

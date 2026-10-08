@@ -283,8 +283,13 @@ fun PatientDashboardScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = accent
                                 )
+                                val anyLateToday = medStatuses.values.any { it == false }
                                 Text(
-                                    if (streak > 0) "All doses on time so far" else "Log a dose on time to start one",
+                                    when {
+                                        streak == 0 -> "Log a dose on time to start one"
+                                        anyLateToday -> "Streak holds, but a dose was late today"
+                                        else -> "All doses on time so far"
+                                    },
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextMuted
                                 )

@@ -145,7 +145,19 @@ fun LoginScreen(
 
         if (errorMessage != null) {
             Spacer(Modifier.height(8.dp))
-            Text(errorMessage.orEmpty(), color = MonarchRed, style = MaterialTheme.typography.bodySmall)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CardWhite, MaterialTheme.shapes.small)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    errorMessage.orEmpty(),
+                    color = MonarchRed,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
 
         Spacer(Modifier.height(24.dp))
