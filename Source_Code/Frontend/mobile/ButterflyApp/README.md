@@ -21,7 +21,7 @@ A native Android app (Kotlin + Jetpack Compose) backed by a real Supabase projec
 
 ## CR-02: Adherence Halo & Double Monarch Days
 
-A dose logged within 30 minutes of its scheduled time (either side) counts as on-time and earns the halo. Consecutive on-time days build a streak; every 2nd consecutive day is a Double Monarch Day and pays $4 instead of $2 (per the approved Project Plan / CR-02 — not the SRS's "3 days," which was an unconfirmed placeholder). Double Monarch history is derived from the existing on-time log dates, so it's visible any time on the Adherence Calendar rather than needing its own notification system.
+A dose logged within 1 hour of its scheduled time (either side) counts as on-time and earns the halo. Consecutive on-time days build a streak; every 2nd consecutive day is a Double Monarch Day and pays $4 instead of $2 (per the approved Project Plan / CR-02 — not the SRS's "3 days," which was an unconfirmed placeholder). Double Monarch history is derived from the existing on-time log dates, so it's visible any time on the Adherence Calendar rather than needing its own notification system.
 
 ## Setup
 
