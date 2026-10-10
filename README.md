@@ -92,7 +92,7 @@ Full details, including exactly what each screen does, are in [`ButterflyApp/REA
 - Same Account menu as patients (info, notifications, privacy, help, logout)
 
 ### CR-02: Adherence Halo & Double Monarch Days
-A dose logged within 30 minutes of its scheduled time (either side) counts as on-time and earns the halo. Consecutive on-time days build a streak; **every 2nd consecutive day** is a Double Monarch Day and pays $4 instead of $2 — per the approved Project Plan / CR-02.
+A dose logged within 1 hour of its scheduled time (either side) counts as on-time and earns the halo. Consecutive on-time days build a streak; **every 2nd consecutive day** is a Double Monarch Day and pays $4 instead of $2 — per the approved Project Plan / CR-02.
 
 ---
 
