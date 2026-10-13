@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,6 +43,7 @@ import com.teammonarch.butterfly.ui.components.BrandLogo
 import com.teammonarch.butterfly.ui.theme.AuthGradient
 import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.DeepViolet
+import com.teammonarch.butterfly.ui.theme.MonarchGreen
 import com.teammonarch.butterfly.ui.theme.MonarchRed
 import kotlinx.coroutines.launch
 
@@ -54,6 +56,10 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showForgotPasswordDialog by remember { mutableStateOf(false) }
+    var resetEmail by remember { mutableStateOf("") }
+    var resetMessage by remember { mutableStateOf<String?>(null) }
+    var resetInProgress by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     fun submit() {
@@ -68,6 +74,21 @@ fun LoginScreen(
             isLoading = false
             result.onSuccess { onLoginSuccess(it) }
                 .onFailure { errorMessage = it.message ?: "Login failed. Check your credentials." }
+        }
+    }
+
+    fun sendReset() {
+        if (resetEmail.isBlank()) {
+            resetMessage = "Enter your email first."
+            return
+        }
+        resetMessage = null
+        resetInProgress = true
+        scope.launch {
+            val result = SupabaseRepository.sendPasswordReset(resetEmail.trim())
+            resetInProgress = false
+            result.onSuccess { resetMessage = "Reset link sent! Check your email." }
+                .onFailure { resetMessage = it.message ?: "Couldn't send reset link. Try again." }
         }
     }
 
@@ -143,6 +164,17 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        TextButton(
+            onClick = {
+                resetEmail = email
+                resetMessage = null
+                showForgotPasswordDialog = true
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Forgot password?", color = CardWhite)
+        }
+
         if (errorMessage != null) {
             Spacer(Modifier.height(8.dp))
             Box(
@@ -190,6 +222,46 @@ fun LoginScreen(
 
         ButterflyEffectsOverlay()
 
+    }
+
+    if (showForgotPasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { showForgotPasswordDialog = false },
+            title = { Text("Reset Password") },
+            text = {
+                Column {
+                    Text(
+                        "Enter your email and we'll send you a link to reset your password.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = resetEmail,
+                        onValueChange = { resetEmail = it },
+                        label = { Text("Email") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (resetMessage != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            resetMessage.orEmpty(),
+                            color = if (resetMessage?.startsWith("Reset link sent") == true) MonarchGreen else MonarchRed,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = ::sendReset, enabled = !resetInProgress) {
+                    Text(if (resetInProgress) "Sending..." else "Send Reset Link")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForgotPasswordDialog = false }) { Text("Close") }
+            }
+        )
     }
 
 }

@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** A dose is "on-time" within this many minutes of its scheduled time, either side (team-approved 1-hour window). */
-private const val ON_TIME_GRACE_MINUTES = 30L
+private const val ON_TIME_GRACE_MINUTES = 60L
 
 private val TIME_FORMATS = listOf(
     DateTimeFormatter.ofPattern("h:mm a", Locale.US),
@@ -79,6 +79,16 @@ object SupabaseRepository {
             }
 
             Result.success(profile)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Sends a password-reset email via Supabase Auth; the user resets their password through the link it contains. */
+    suspend fun sendPasswordReset(email: String): Result<Unit> {
+        return try {
+            client.auth.resetPasswordForEmail(email)
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }

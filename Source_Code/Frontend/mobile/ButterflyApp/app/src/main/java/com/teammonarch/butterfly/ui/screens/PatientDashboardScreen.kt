@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +34,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
@@ -71,6 +75,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PatientDashboardScreen(
     onNavigateToAccount: () -> Unit,
@@ -94,6 +99,7 @@ fun PatientDashboardScreen(
     var selectedTab by remember { mutableStateOf(NavTab.HOME) }
     var newMedName by remember { mutableStateOf("") }
     var newMedTime by remember { mutableStateOf("") }
+    var showTimePicker by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val stage = GameStage.forBB(bb)
 
@@ -397,13 +403,22 @@ fun PatientDashboardScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = newMedTime,
-                            onValueChange = { newMedTime = it },
-                            label = { Text("Scheduled time (e.g. 8:00 AM)") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Box {
+                            OutlinedTextField(
+                                value = newMedTime,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Scheduled time") },
+                                placeholder = { Text("Tap to choose a time") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Box(
+                                Modifier
+                                    .matchParentSize()
+                                    .clickable { showTimePicker = true }
+                            )
+                        }
                         Spacer(Modifier.height(12.dp))
                         Button(onClick = ::addMedication, modifier = Modifier.fillMaxWidth()) {
                             Text("Add Medication")
@@ -446,6 +461,36 @@ fun PatientDashboardScreen(
                 TextButton(onClick = { showDoubleMonarchDialog = false }) {
                     Text("Dismiss")
                 }
+            }
+        )
+    }
+
+    if (showTimePicker) {
+        val pickerState = rememberTimePickerState(
+            initialHour = 8,
+            initialMinute = 0,
+            is24Hour = false
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            title = { Text("Scheduled time") },
+            text = { TimePicker(state = pickerState) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val hour12 = when {
+                        pickerState.hour == 0 -> 12
+                        pickerState.hour > 12 -> pickerState.hour - 12
+                        else -> pickerState.hour
+                    }
+                    val amPm = if (pickerState.hour < 12) "AM" else "PM"
+                    newMedTime = "%d:%02d %s".format(hour12, pickerState.minute, amPm)
+                    showTimePicker = false
+                }) {
+                    Text("OK")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
             }
         )
     }
@@ -533,8 +578,10 @@ private fun MedicationRowCard(med: MedicationRow, wasOnTime: Boolean?, onMarkTak
                 StatusChip("On Time", Color(0xFF4A9D6E))
             } else if (wasOnTime == false) {
                 StatusChip("Late", Color(0xFFE0A030))
-            } else {
+            } else if (isDueSoon(med.scheduledTime)) {
                 Button(onClick = onMarkTaken) { Text("Log Dose") }
+            } else {
+                StatusChip("Not due yet", TextMuted)
             }
         }
     }
@@ -546,13 +593,13 @@ private val MED_STATUS_TIME_FORMATS = listOf(
     DateTimeFormatter.ofPattern("H:mm", Locale.US)
 )
 
-/** True once a scheduled dose is within 30 minutes of now or already past -- otherwise it's just upcoming, not "due now". */
+/** True once a scheduled dose is within 60 minutes of now or already past -- otherwise it's just upcoming, not "due now" (matches the 1-hour on-time grace window). */
 private fun isDueSoon(scheduledTimeText: String): Boolean {
     val cleaned = scheduledTimeText.trim().uppercase(Locale.US)
     val scheduledTime = MED_STATUS_TIME_FORMATS.firstNotNullOfOrNull {
         runCatching { LocalTime.parse(cleaned, it) }.getOrNull()
     } ?: return true
-    return !LocalTime.now().isBefore(scheduledTime.minusMinutes(30))
+    return !LocalTime.now().isBefore(scheduledTime.minusMinutes(60))
 }
 
 @Composable
