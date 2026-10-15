@@ -43,10 +43,10 @@ Lupus Butterfly is an Android app that helps people with lupus take their medica
 Lupus Butterfly is a native Android app. It is not a website, so it must be installed on a phone or emulator. You install it by opening the project in Android Studio and pressing **Run**.
 
 1. **Get the source code.** Open a terminal and run:
-   `git clone https://github.com/dikshyapant/capstone-spring-2026.git`
-   - No Git? Open the [project repository](https://github.com/dikshyapant/capstone-spring-2026), click **Code → Download ZIP**, and unzip the file.
+   `git clone https://github.com/dikshyapant/capstone-2026.git`
+   - No Git? Open the [project repository](https://github.com/dikshyapant/capstone-2026), click **Code → Download ZIP**, and unzip the file.
 2. **Open the project in Android Studio.** Start Android Studio, click **Open**, and select the folder
-   `capstone-spring-2026/Source_Code/Frontend/mobile/ButterflyApp`.
+   `capstone-2026/Source_Code/Frontend/mobile/ButterflyApp`.
    - Select the **ButterflyApp** folder itself, not the top-level folder. Android Studio only recognizes the project from this folder.
 3. **Wait for the Gradle sync to finish.** Android Studio downloads everything the app needs. The first sync can take several minutes. If it asks to upgrade the Android Gradle Plugin (AGP) or Gradle, accept.
 4. **Set up a device to run the app on.** Choose one:
@@ -233,7 +233,7 @@ Lupus Butterfly is a native Android app. It is not a website, so it must be inst
 
 - **Support Email:** jinhnguyen@my.unt.edu
 - **Website:** Not applicable (Lupus Butterfly is an Android app, not a website)
-- **Project Repository:** [github.com/dikshyapant/capstone-spring-2026](https://github.com/dikshyapant/capstone-spring-2026)
+- **Project Repository:** [github.com/dikshyapant/capstone-2026](https://github.com/dikshyapant/capstone-2026)
 - **Other Support Channels:** **Help & Support** inside the app (**Settings → Help & Support**)
 
 ---
