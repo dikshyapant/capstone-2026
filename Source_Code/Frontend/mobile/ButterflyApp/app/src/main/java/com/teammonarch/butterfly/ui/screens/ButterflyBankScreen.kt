@@ -1,5 +1,7 @@
 package com.teammonarch.butterfly.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -76,7 +80,11 @@ fun ButterflyBankScreen(onBack: () -> Unit) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Card(colors = CardDefaults.cardColors(containerColor = CardWhite), modifier = Modifier.fillMaxWidth()) {
@@ -109,8 +117,13 @@ fun ButterflyBankScreen(onBack: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                     if (nextStage != null) {
                         val progress = (bb.toFloat() / nextStage.minBB.toFloat()).coerceIn(0f, 1f)
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = progress,
+                            animationSpec = tween(durationMillis = 600),
+                            label = "progressAnimation"
+                        )
                         LinearProgressIndicator(
-                            progress = progress,
+                            progress = animatedProgress,
                             color = accent,
                             modifier = Modifier.fillMaxWidth().height(8.dp)
                         )

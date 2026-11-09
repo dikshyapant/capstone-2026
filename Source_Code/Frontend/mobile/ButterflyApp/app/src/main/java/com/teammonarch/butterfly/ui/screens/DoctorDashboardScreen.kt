@@ -67,7 +67,8 @@ private fun timeBasedGreeting(): String {
 fun DoctorDashboardScreen(
     onNavigateToAccount: () -> Unit,
     onNavigateToAlerts: () -> Unit,
-    onNavigateToNotifications: () -> Unit = {}
+    onNavigateToNotifications: () -> Unit = {},
+    onNavigateToReport: () -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(ClinicianNavTab.DASHBOARD) }
@@ -95,6 +96,7 @@ fun DoctorDashboardScreen(
                 when (tab) {
                     ClinicianNavTab.SETTINGS -> onNavigateToAccount()
                     ClinicianNavTab.ALERTS -> onNavigateToAlerts()
+                    ClinicianNavTab.PATIENTS -> onNavigateToReport()
                     else -> selectedTab = tab
                 }
             }

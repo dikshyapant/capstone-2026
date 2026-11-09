@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,8 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +103,11 @@ fun PatientDashboardScreen(
     var newMedName by remember { mutableStateOf("") }
     var newMedTime by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
+    var timePickerTarget by remember { mutableStateOf("add") } // "add" or "edit"
+    var editingMedication by remember { mutableStateOf<MedicationRow?>(null) }
+    var editName by remember { mutableStateOf("") }
+    var editTime by remember { mutableStateOf("") }
+    var deletingMedication by remember { mutableStateOf<MedicationRow?>(null) }
     val scope = rememberCoroutineScope()
     val stage = GameStage.forBB(bb)
 
@@ -382,7 +390,13 @@ fun PatientDashboardScreen(
                     MedicationRowCard(
                         med = med,
                         wasOnTime = medStatuses[med.id],
-                        onMarkTaken = { markTaken(med) }
+                        onMarkTaken = { markTaken(med) },
+                        onEdit = {
+                            editingMedication = med
+                            editName = med.name
+                            editTime = med.scheduledTime
+                        },
+                        onDelete = { deletingMedication = med }
                     )
                 }
             }
@@ -416,7 +430,10 @@ fun PatientDashboardScreen(
                             Box(
                                 Modifier
                                     .matchParentSize()
-                                    .clickable { showTimePicker = true }
+                                    .clickable {
+                                        timePickerTarget = "add"
+                                        showTimePicker = true
+                                    }
                             )
                         }
                         Spacer(Modifier.height(12.dp))
@@ -441,14 +458,31 @@ fun PatientDashboardScreen(
         val reward = lastReward!!
         AlertDialog(
             onDismissRequest = { showDoubleMonarchDialog = false },
-            title = { Text("✨ Double Monarch Day!", fontWeight = FontWeight.Bold) },
+            containerColor = Color(0xFFFFF7E6),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("✨", style = MaterialTheme.typography.headlineMedium)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Double Monarch Day!", fontWeight = FontWeight.Bold, color = GoldAmber)
+                }
+            },
             text = {
                 Column {
                     Text("$streak-day streak · every dose on time")
                     Spacer(Modifier.height(12.dp))
-                    DialogRow("Base award", "${reward.bbAwarded / 2} BB")
-                    DialogRow("Multiplier", "× 2.0")
-                    DialogRow("New balance", "${reward.newBalance} BB")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(GoldAmber.copy(alpha = 0.18f), MaterialTheme.shapes.medium)
+                            .border(1.5.dp, GoldAmber, MaterialTheme.shapes.medium)
+                            .padding(12.dp)
+                    ) {
+                        Column {
+                            DialogRow("Base award", "${reward.bbAwarded / 2} BB")
+                            DialogRow("Multiplier", "× 2.0")
+                            DialogRow("New balance", "${reward.newBalance} BB")
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Butterfly Bucks have no real-world monetary value.",
@@ -483,7 +517,8 @@ fun PatientDashboardScreen(
                         else -> pickerState.hour
                     }
                     val amPm = if (pickerState.hour < 12) "AM" else "PM"
-                    newMedTime = "%d:%02d %s".format(hour12, pickerState.minute, amPm)
+                    val formatted = "%d:%02d %s".format(hour12, pickerState.minute, amPm)
+                    if (timePickerTarget == "edit") editTime = formatted else newMedTime = formatted
                     showTimePicker = false
                 }) {
                     Text("OK")
@@ -491,6 +526,98 @@ fun PatientDashboardScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (editingMedication != null) {
+        val med = editingMedication!!
+        AlertDialog(
+            onDismissRequest = { editingMedication = null },
+            title = { Text("Edit Medication") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Medication name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box {
+                        OutlinedTextField(
+                            value = editTime,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Scheduled time") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Box(
+                            Modifier
+                                .matchParentSize()
+                                .clickable {
+                                    timePickerTarget = "edit"
+                                    showTimePicker = true
+                                }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editName.isNotBlank() && editTime.isNotBlank(),
+                    onClick = {
+                        val medId = med.id
+                        val patientId = profile?.id
+                        if (medId != null && patientId != null) {
+                            scope.launch {
+                                SupabaseRepository.updateMedication(medId, editName.trim(), editTime.trim())
+                                    .onSuccess {
+                                        editingMedication = null
+                                        SupabaseRepository.fetchMedications(patientId).onSuccess { medications = it }
+                                    }
+                                    .onFailure { errorMessage = it.message }
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingMedication = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (deletingMedication != null) {
+        val med = deletingMedication!!
+        AlertDialog(
+            onDismissRequest = { deletingMedication = null },
+            title = { Text("Delete Medication?") },
+            text = { Text("This will permanently remove \"${med.name}\" from your medication list. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    val medId = med.id
+                    val patientId = profile?.id
+                    if (medId != null && patientId != null) {
+                        scope.launch {
+                            SupabaseRepository.deleteMedication(medId)
+                                .onSuccess {
+                                    deletingMedication = null
+                                    SupabaseRepository.fetchMedications(patientId).onSuccess { medications = it }
+                                }
+                                .onFailure { errorMessage = it.message }
+                        }
+                    }
+                }) {
+                    Text("Delete", color = MonarchRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingMedication = null }) { Text("Cancel") }
             }
         )
     }
@@ -563,25 +690,42 @@ private fun QuickActionButton(label: String, modifier: Modifier = Modifier, onCl
 }
 
 @Composable
-private fun MedicationRowCard(med: MedicationRow, wasOnTime: Boolean?, onMarkTaken: () -> Unit) {
+private fun MedicationRowCard(
+    med: MedicationRow,
+    wasOnTime: Boolean?,
+    onMarkTaken: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
     Card(colors = CardDefaults.cardColors(containerColor = CardWhite), modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(med.name, fontWeight = FontWeight.Bold)
-                Text("Scheduled dose: ${med.scheduledTime}", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(med.name, fontWeight = FontWeight.Bold)
+                    Text("Scheduled dose: ${med.scheduledTime}", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                }
+                if (wasOnTime == true) {
+                    StatusChip("On Time", Color(0xFF4A9D6E))
+                } else if (wasOnTime == false) {
+                    StatusChip("Late", Color(0xFFE0A030))
+                } else if (isDueSoon(med.scheduledTime)) {
+                    Button(onClick = onMarkTaken) { Text("Log Dose") }
+                } else {
+                    StatusChip("Not due yet", TextMuted)
+                }
             }
-            if (wasOnTime == true) {
-                StatusChip("On Time", Color(0xFF4A9D6E))
-            } else if (wasOnTime == false) {
-                StatusChip("Late", Color(0xFFE0A030))
-            } else if (isDueSoon(med.scheduledTime)) {
-                Button(onClick = onMarkTaken) { Text("Log Dose") }
-            } else {
-                StatusChip("Not due yet", TextMuted)
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Edit, contentDescription = "Edit ${med.name}", modifier = Modifier.size(18.dp), tint = TextMuted)
+                }
+                Spacer(Modifier.width(4.dp))
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Delete ${med.name}", modifier = Modifier.size(18.dp), tint = MonarchRed)
+                }
             }
         }
     }

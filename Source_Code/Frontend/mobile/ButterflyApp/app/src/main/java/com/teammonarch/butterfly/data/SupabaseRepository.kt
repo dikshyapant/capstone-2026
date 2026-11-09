@@ -9,6 +9,7 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -231,6 +232,34 @@ object SupabaseRepository {
         }
     }
 
+    suspend fun updateMedication(medicationId: String, name: String, scheduledTime: String): Result<Unit> {
+        return try {
+            client.postgrest["medications"].update(
+                {
+                    set("name", name)
+                    set("scheduled_time", scheduledTime)
+                }
+            ) {
+                filter { eq("id", medicationId) }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** Only removes the medication definition -- past medication_logs rows (and the BB/streak already earned from them) are untouched. */
+    suspend fun deleteMedication(medicationId: String): Result<Unit> {
+        return try {
+            client.postgrest["medications"].delete {
+                filter { eq("id", medicationId) }
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     /**
      * Logs a dose as taken now. A dose counts as on-time when it's logged within
      * [ON_TIME_GRACE_MINUTES] of the medication's scheduled time, either side (team's
@@ -429,4 +458,46 @@ object SupabaseRepository {
             patient.currentStreak == 0 && lastLog != null && !lastLog.isBefore(today.minusDays(7))
         }
     }
+
+    /** Per-patient on-time vs late dose counts for the given month, for the clinician monthly adherence report (REQ-15). */
+    suspend fun fetchMonthlyAdherenceSummary(yearMonth: YearMonth): Result<List<PatientAdherenceSummary>> {
+        return try {
+            val monthStart = yearMonth.atDay(1).toString()
+            val monthEnd = yearMonth.atEndOfMonth().toString()
+            val patients = client.postgrest["profiles"]
+                .select { filter { eq("role", "patient") } }
+                .decodeList<ProfileRow>()
+            val logs = client.postgrest["medication_logs"]
+                .select {
+                    filter {
+                        gte("scheduled_for", monthStart)
+                        lte("scheduled_for", monthEnd)
+                    }
+                }
+                .decodeList<MedicationLogRow>()
+            val logsByPatient = logs.groupBy { it.patientId }
+
+            val summaries = patients.map { patient ->
+                val patientLogs = logsByPatient[patient.id].orEmpty()
+                PatientAdherenceSummary(
+                    patientName = patient.fullName,
+                    totalLogs = patientLogs.size,
+                    onTimeCount = patientLogs.count { it.status == "taken_on_time" },
+                    lateCount = patientLogs.count { it.status == "taken_late" }
+                )
+            }
+            Result.success(summaries)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
+
+data class PatientAdherenceSummary(
+    val patientName: String,
+    val totalLogs: Int,
+    val onTimeCount: Int,
+    val lateCount: Int
+) {
+    val onTimePercent: Int get() = if (totalLogs == 0) 0 else (onTimeCount * 100) / totalLogs
 }

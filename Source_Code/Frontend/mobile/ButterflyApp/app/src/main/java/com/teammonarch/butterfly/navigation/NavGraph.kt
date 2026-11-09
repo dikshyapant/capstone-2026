@@ -11,6 +11,7 @@ import com.teammonarch.butterfly.ui.screens.AccountInfoScreen
 import com.teammonarch.butterfly.ui.screens.AdherenceCalendarScreen
 import com.teammonarch.butterfly.ui.screens.ButterflyBankScreen
 import com.teammonarch.butterfly.ui.screens.ClinicianAlertsScreen
+import com.teammonarch.butterfly.ui.screens.ClinicianReportScreen
 import com.teammonarch.butterfly.ui.screens.CustomiseButterflyScreen
 import com.teammonarch.butterfly.ui.screens.DataPrivacyScreen
 import com.teammonarch.butterfly.ui.screens.DoctorAccountScreen
@@ -34,6 +35,7 @@ object Routes {
     const val DOCTOR_DASHBOARD = "doctor_dashboard"
     const val DOCTOR_ACCOUNT = "doctor_account"
     const val CLINICIAN_ALERTS = "clinician_alerts"
+    const val CLINICIAN_REPORT = "clinician_report"
     const val ACCOUNT_INFO = "account_info"
     const val NOTIFICATION_SETTINGS = "notification_settings"
     const val NOTIFICATIONS = "notifications"
@@ -106,11 +108,15 @@ fun ButterflyNavGraph(navController: NavHostController = rememberNavController()
             DoctorDashboardScreen(
                 onNavigateToAccount = { navController.navigate(Routes.DOCTOR_ACCOUNT) },
                 onNavigateToAlerts = { navController.navigate(Routes.CLINICIAN_ALERTS) },
-                onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) }
+                onNavigateToNotifications = { navController.navigate(Routes.NOTIFICATIONS) },
+                onNavigateToReport = { navController.navigate(Routes.CLINICIAN_REPORT) }
             )
         }
         composable(Routes.CLINICIAN_ALERTS) {
             ClinicianAlertsScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.CLINICIAN_REPORT) {
+            ClinicianReportScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.DOCTOR_ACCOUNT) {
             DoctorAccountScreen(

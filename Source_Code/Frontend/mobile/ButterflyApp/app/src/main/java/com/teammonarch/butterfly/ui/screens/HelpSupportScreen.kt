@@ -35,7 +35,7 @@ private val FAQ = listOf(
     ),
     FaqItem(
         "What counts as on time?",
-        "Logging a dose within 30 minutes of its scheduled time, either side, counts as on time and earns the adherence halo."
+        "Logging a dose within 1 hour of its scheduled time, either side, counts as on time and earns the adherence halo."
     ),
     FaqItem(
         "What is a Double Monarch Day?",
@@ -69,6 +69,21 @@ fun HelpSupportScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp)
         ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("A note on medical advice", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "This app is a support tool to help you track and remember your medication -- it does not replace professional medical advice. Never change your prescribed dosage based on anything shown here; always talk to your doctor or pharmacist about your treatment.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                }
+            }
+
             FAQ.forEach { item ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = CardWhite),

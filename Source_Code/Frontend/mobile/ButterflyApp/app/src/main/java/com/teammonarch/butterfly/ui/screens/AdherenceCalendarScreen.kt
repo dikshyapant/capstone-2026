@@ -1,6 +1,8 @@
 package com.teammonarch.butterfly.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +13,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,10 +42,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.teammonarch.butterfly.data.AppSession
 import com.teammonarch.butterfly.data.SupabaseRepository
+import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.GoldAmber
+import com.teammonarch.butterfly.ui.theme.MonarchRed
 import com.teammonarch.butterfly.ui.theme.TextMuted
 import com.teammonarch.butterfly.ui.theme.Violet
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
@@ -80,6 +89,9 @@ fun AdherenceCalendarScreen(onBack: () -> Unit) {
         }
     }
 
+    val doubleMonarchDates = remember(adherentDates) { computeDoubleMonarchDates(adherentDates) }
+    val lastDoubleMonarchDate = remember(doubleMonarchDates) { doubleMonarchDates.maxOrNull() }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -107,6 +119,32 @@ fun AdherenceCalendarScreen(onBack: () -> Unit) {
                 )
             }
 
+            if (lastDoubleMonarchDate != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = GoldAmber.copy(alpha = 0.16f)),
+                    border = BorderStroke(1.5.dp, GoldAmber),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("✨", style = MaterialTheme.typography.displaySmall)
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Double Monarch Day!", fontWeight = FontWeight.Bold, color = GoldAmber)
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                "Your last one was ${lastDoubleMonarchDate.format(DateTimeFormatter.ofPattern("MMM d"))} — doses logged on time earn 2x Butterfly Bucks every 2nd consecutive day.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -132,16 +170,19 @@ fun AdherenceCalendarScreen(onBack: () -> Unit) {
                     CircularProgressIndicator()
                 }
             } else {
-                val doubleMonarchDates = remember(adherentDates) { computeDoubleMonarchDates(adherentDates) }
                 CalendarGrid(yearMonth = yearMonth, adherentDates = adherentDates, doubleMonarchDates = doubleMonarchDates)
             }
 
             Spacer(Modifier.height(16.dp))
-            Text(
-                "🌟 Days with a glow mark an on-time dose. ⭐ marks a Double Monarch Day (2x reward).",
-                style = MaterialTheme.typography.bodySmall,
-                color = TextMuted
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LegendSwatch(GoldAmber)
+                Spacer(Modifier.width(6.dp))
+                Text("On-time dose", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                Spacer(Modifier.width(16.dp))
+                LegendSwatch(Violet)
+                Spacer(Modifier.width(6.dp))
+                Text("Double Monarch Day (2x)", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+            }
         }
     }
 }
@@ -174,27 +215,33 @@ private fun CalendarGrid(yearMonth: YearMonth, adherentDates: Set<LocalDate>, do
                             val hasHalo = date in adherentDates
                             val isDoubleMonarch = date in doubleMonarchDates
                             val isToday = date == LocalDate.now()
+                            val fillColor = when {
+                                isDoubleMonarch -> Violet
+                                hasHalo -> GoldAmber
+                                else -> null
+                            }
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .let {
-                                        if (hasHalo) it.background(GoldAmber.copy(alpha = if (isDoubleMonarch) 0.55f else 0.35f), CircleShape) else it
+                                        if (fillColor != null) it.background(fillColor, CircleShape) else it
                                     }
                                     .let {
-                                        if (isToday) it.background(Violet.copy(alpha = 0.15f), CircleShape) else it
+                                        if (isToday) it.border(2.dp, MonarchRed, CircleShape) else it
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     date.dayOfMonth.toString(),
                                     style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (fillColor != null) CardWhite else MaterialTheme.colorScheme.onSurface
                                 )
                                 if (isDoubleMonarch) {
                                     Icon(
                                         Icons.Filled.Star,
                                         contentDescription = "Double Monarch Day",
-                                        tint = GoldAmber,
+                                        tint = CardWhite,
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)
                                             .height(12.dp)
@@ -210,4 +257,13 @@ private fun CalendarGrid(yearMonth: YearMonth, adherentDates: Set<LocalDate>, do
             }
         }
     }
+}
+
+@Composable
+private fun LegendSwatch(color: androidx.compose.ui.graphics.Color) {
+    Box(
+        modifier = Modifier
+            .size(10.dp)
+            .background(color, CircleShape)
+    )
 }
