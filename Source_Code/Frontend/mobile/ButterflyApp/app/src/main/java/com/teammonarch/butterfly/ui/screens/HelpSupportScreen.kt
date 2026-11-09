@@ -1,5 +1,8 @@
 package com.teammonarch.butterfly.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,10 +24,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.teammonarch.butterfly.ui.theme.CardWhite
 import com.teammonarch.butterfly.ui.theme.TextMuted
+import com.teammonarch.butterfly.ui.theme.Violet
+
+private const val SUPPORT_EMAIL = "jinhnguyen@my.unt.edu"
 
 private data class FaqItem(val question: String, val answer: String)
 
@@ -50,6 +58,7 @@ private val FAQ = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpSupportScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -98,9 +107,24 @@ fun HelpSupportScreen(onBack: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "Need something else? Reach out to your care team from the Account Info page.",
+                "Need something else? Reach out to your care team from the Account Info page, or email support directly:",
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                SUPPORT_EMAIL,
+                style = MaterialTheme.typography.bodySmall,
+                color = Violet,
+                fontWeight = FontWeight.Bold,
+                textDecoration = TextDecoration.Underline,
+                modifier = Modifier.clickable {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:$SUPPORT_EMAIL")
+                        putExtra(Intent.EXTRA_SUBJECT, "Lupus Butterfly App Support")
+                    }
+                    context.startActivity(intent)
+                }
             )
         }
     }
